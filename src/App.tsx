@@ -62,7 +62,7 @@ interface DistrictPerformance {
 /* -------------------------------------------------------------------------- */
 /*                                Constants                                   */
 /* -------------------------------------------------------------------------- */
-const API_URL: string = import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api';
+const API_URL: string = import.meta.env.VITE_API_URL ?? 'https://mgnrega-dashboard.vercel.app/api';
 
 /* -------------------------------------------------------------------------- */
 /*                              Helper Functions                              */
