@@ -153,7 +153,6 @@ const App: FC = () => {
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const reportRef = useRef<HTMLDivElement>(null);
 
-  /* ------------------------------- Effects -------------------------------- */
   useEffect(() => {
     fetchStates();
     fetchAllDistricts();
@@ -167,7 +166,6 @@ const App: FC = () => {
     if (selectedDistrict) fetchPerformance(selectedDistrict);
   }, [selectedDistrict]);
 
-  /* --------------------------- API Calls --------------------------------- */
   const fetchStates = async (): Promise<void> => {
     try {
       const res = await fetch(`${API_URL}/states`);
@@ -183,8 +181,8 @@ const App: FC = () => {
     try {
       const res = await fetch(`${API_URL}/states`);
       const statesData: State[] = await res.json();
-
       const allDist: District[] = [];
+
       for (const state of statesData) {
         const distRes = await fetch(`${API_URL}/districts/${state.state_code}`);
         const distData: District[] = await distRes.json();
@@ -245,7 +243,6 @@ const App: FC = () => {
     setCompareData(data);
   };
 
-  /* ---------------------------- Handlers --------------------------------- */
   const handleSearch = (term: string): void => {
     setSearchTerm(term);
     setShowSearch(term.length > 1);
@@ -275,14 +272,7 @@ const App: FC = () => {
   const shareOnWhatsApp = (): void => {
     if (!performance) return;
 
-    const text = `मनरेगा प्रदर्शन - ${performance.district.district_name}
-
-परिवारों को रोजगार: ${formatNumber(performance.district.total_households)}
-औसत काम के दिन: ${performance.district.avg_days_per_household?.toFixed(1)}
-खर्च: ${formatCurrency(performance.district.total_expenditure)}
-पूरे काम: ${formatNumber(performance.district.works_completed)}
-
-महीना: ${performance.district.month}`;
+    const text = `मनरेगा प्रदर्शन - ${performance.district.district_name}\n\nपरिवारों को रोजगार: ${formatNumber(performance.district.total_households)}\nऔसत काम के दिन: ${performance.district.avg_days_per_household?.toFixed(1)}\nखर्च: ${formatCurrency(performance.district.total_expenditure)}\nपूरे काम: ${formatNumber(performance.district.works_completed)}\n\nमहीना: ${performance.district.month}`;
 
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
@@ -298,7 +288,6 @@ const App: FC = () => {
       d.state_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  /* ---------------------------------------------------------------------- */
   return (
     <div className={`app ${darkMode ? 'dark' : ''}`}>
       <header className="header">
@@ -308,18 +297,10 @@ const App: FC = () => {
             <p>MGNREGA Performance Dashboard</p>
           </div>
           <div className="header-actions">
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              className="icon-btn"
-              title="Toggle Theme"
-            >
+            <button onClick={() => setDarkMode(!darkMode)} className="icon-btn" title="Toggle Theme">
               {darkMode ? <Sun size={20} /> : <Moon size={20} />}
             </button>
-            <button
-              onClick={() => window.location.reload()}
-              className="icon-btn"
-              title="Refresh"
-            >
+            <button onClick={() => window.location.reload()} className="icon-btn" title="Refresh">
               <RefreshCw size={20} />
             </button>
           </div>
@@ -339,13 +320,7 @@ const App: FC = () => {
               className="search-input"
             />
             {searchTerm && (
-              <button
-                onClick={() => {
-                  setSearchTerm('');
-                  setShowSearch(false);
-                }}
-                className="clear-btn"
-              >
+              <button onClick={() => { setSearchTerm(''); setShowSearch(false); }} className="clear-btn">
                 <X size={16} />
               </button>
             )}
@@ -367,10 +342,9 @@ const App: FC = () => {
           )}
         </div>
 
-        {/* Traditional Selectors */}
+        {/* Selectors */}
         <div className="location-selector">
           <h2>या राज्य-जिला चुनें / Or Select State-District</h2>
-
           <div className="selector-grid">
             <div className="selector-group">
               <label>राज्य / State</label>
@@ -395,9 +369,7 @@ const App: FC = () => {
               <label>जिला / District</label>
               <select
                 value={selectedDistrict}
-                onChange={(e: ChangeEvent<HTMLSelectElement>) =>
-                  setSelectedDistrict(e.target.value)
-                }
+                onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedDistrict(e.target.value)}
                 disabled={!selectedState}
               >
                 <option value="">जिला चुनें / Select District</option>
@@ -429,24 +401,15 @@ const App: FC = () => {
           <div ref={reportRef}>
             <div className="district-banner">
               <div>
-                <h2>
-                  {performance.district.district_name}, {performance.district.state_name}
-                </h2>
-                <p>
-                  महीना: {performance.district.month} | अंतिम अपडेट:{' '}
-                  {lastUpdated.toLocaleString('hi-IN')}
-                </p>
+                <h2>{performance.district.district_name}, {performance.district.state_name}</h2>
+                <p>महीना: {performance.district.month} | अंतिम अपडेट: {lastUpdated.toLocaleString('hi-IN')}</p>
               </div>
               <div className="action-buttons">
-                {compareDistricts.length < 3 &&
-                  !compareDistricts.includes(selectedDistrict) && (
-                    <button
-                      onClick={() => addToCompare(selectedDistrict)}
-                      className="btn-secondary"
-                    >
-                      <BarChart3 size={16} /> तुलना में जोड़ें
-                    </button>
-                  )}
+                {compareDistricts.length < 3 && !compareDistricts.includes(selectedDistrict) && (
+                  <button onClick={() => addToCompare(selectedDistrict)} className="btn-secondary">
+                    <BarChart3 size={16} /> तुलना में जोड़ें
+                  </button>
+                )}
                 <button onClick={shareOnWhatsApp} className="btn-success">
                   <Share2 size={16} /> WhatsApp शेयर
                 </button>
@@ -457,44 +420,10 @@ const App: FC = () => {
             </div>
 
             <div className="metrics-grid">
-              <MetricCard
-                icon={Users}
-                title="परिवारों को रोजगार"
-                value={formatNumber(performance.district.total_households)}
-                subtitle="Families Employed"
-                trend={performance.trends.households}
-                audioText={`${performance.district.total_households} परिवारों को रोजगार मिला`}
-                color="blue"
-              />
-              <MetricCard
-                icon={Calendar}
-                title="औसत काम के दिन"
-                value={performance.district.avg_days_per_household?.toFixed(1) ?? '0'}
-                subtitle="Average Work Days"
-                trend={performance.trends.days}
-                audioText={`औसत ${
-                  performance.district.avg_days_per_household?.toFixed(1) ?? '0'
-                } दिन काम मिला`}
-                color="green"
-              />
-              <MetricCard
-                icon={DollarSign}
-                title="खर्च की गई राशि"
-                value={formatCurrency(performance.district.total_expenditure)}
-                subtitle="Total Expenditure"
-                trend={performance.trends.expenditure}
-                audioText={`कुल ${performance.district.total_expenditure} रुपये खर्च हुए`}
-                color="purple"
-              />
-              <MetricCard
-                icon={CheckCircle}
-                title="पूरे हुए काम"
-                value={formatNumber(performance.district.works_completed)}
-                subtitle="Completed Works"
-                trend={performance.trends.works}
-                audioText={`${performance.district.works_completed} काम पूरे हुए`}
-                color="orange"
-              />
+              <MetricCard icon={Users} title="परिवारों को रोजगार" value={formatNumber(performance.district.total_households)} subtitle="Families Employed" trend={performance.trends.households} audioText={`${performance.district.total_households} परिवारों को रोजगार मिला`} color="blue" />
+              <MetricCard icon={Calendar} title="औसत काम के दिन" value={performance.district.avg_days_per_household?.toFixed(1) ?? '0'} subtitle="Average Work Days" trend={performance.trends.days} audioText={`औसत ${performance.district.avg_days_per_household?.toFixed(1) ?? '0'} दिन काम मिला`} color="green" />
+              <MetricCard icon={DollarSign} title="खर्च की गई राशि" value={formatCurrency(performance.district.total_expenditure)} subtitle="Total Expenditure" trend={performance.trends.expenditure} audioText={`कुल ${performance.district.total_expenditure} रुपये खर्च हुए`} color="purple" />
+              <MetricCard icon={CheckCircle} title="पूरे हुए काम" value={formatNumber(performance.district.works_completed)} subtitle="Completed Works" trend={performance.trends.works} audioText={`${performance.district.works_completed} काम पूरे हुए`} color="orange" />
             </div>
 
             <div className="comparison-section">
@@ -502,20 +431,10 @@ const App: FC = () => {
               <div className="bar-group">
                 <div className="bar-label">
                   <span>आपका जिला</span>
-                  <span className="bar-value">
-                    {performance.district.avg_days_per_household?.toFixed(1) ?? '0'} दिन
-                  </span>
+                  <span className="bar-value">{performance.district.avg_days_per_household?.toFixed(1) ?? '0'} दिन</span>
                 </div>
                 <div className="bar-track">
-                  <div
-                    className="bar-fill blue"
-                    style={{
-                      width: `${Math.min(
-                        (performance.district.avg_days_per_household ?? 0) * 3.33,
-                        100
-                      )}%`,
-                    }}
-                  ></div>
+                  <div className="bar-fill blue" style={{ width: `${Math.min((performance.district.avg_days_per_household ?? 0) * 3.33, 100)}%` }}></div>
                 </div>
               </div>
               <div className="bar-group">
@@ -524,18 +443,11 @@ const App: FC = () => {
                   <span className="bar-value">{performance.stateAverage} दिन</span>
                 </div>
                 <div className="bar-track">
-                  <div
-                    className="bar-fill green"
-                    style={{
-                      width: `${Math.min(performance.stateAverage * 3.33, 100)}%`,
-                    }}
-                  ></div>
+                  <div className="bar-fill green" style={{ width: `${Math.min(performance.stateAverage * 3.33, 100)}%` }}></div>
                 </div>
               </div>
               {performance.district.avg_days_per_household! > performance.stateAverage ? (
-                <p className="comparison-result positive">
-                  आपका जिला राज्य औसत से बेहतर प्रदर्शन कर रहा है!
-                </p>
+                <p className="comparison-result positive">आपका जिला राज्य औसत से बेहतर प्रदर्शन कर रहा है!</p>
               ) : (
                 <p className="comparison-result neutral">सुधार की गुंजाइश है</p>
               )}
@@ -543,7 +455,6 @@ const App: FC = () => {
           </div>
         )}
 
-        {/* Compare Districts Section */}
         {compareData.length > 0 && (
           <div className="compare-section">
             <h2>जिलों की तुलना / Compare Districts</h2>
@@ -552,28 +463,14 @@ const App: FC = () => {
                 <div key={idx} className="compare-card">
                   <div className="compare-header">
                     <h3>{data.district.district_name}</h3>
-                    <button
-                      onClick={() => removeFromCompare(data.district.district_code)}
-                      className="remove-btn"
-                    >
+                    <button onClick={() => removeFromCompare(data.district.district_code)} className="remove-btn">
                       <X size={16} />
                     </button>
                   </div>
                   <div className="compare-stats">
-                    <div className="compare-stat">
-                      <Users size={20} />
-                      <span>{formatNumber(data.district.total_households)}</span>
-                    </div>
-                    <div className="compare-stat">
-                      <Calendar size={20} />
-                      <span>
-                        {data.district.avg_days_per_household?.toFixed(1) ?? '0'} दिन
-                      </span>
-                    </div>
-                    <div className="compare-stat">
-                      <DollarSign size={20} />
-                      <span>{formatCurrency(data.district.total_expenditure)}</span>
-                    </div>
+                    <div className="compare-stat"><Users size={20} /><span>{formatNumber(data.district.total_households)}</span></div>
+                    <div className="compare-stat"><Calendar size={20} /><span>{data.district.avg_days_per_household?.toFixed(1) ?? '0'} दिन</span></div>
+                    <div className="compare-stat"><DollarSign size={20} /><span>{formatCurrency(data.district.total_expenditure)}</span></div>
                   </div>
                 </div>
               ))}
@@ -591,10 +488,7 @@ const App: FC = () => {
       </main>
 
       <footer className="footer">
-        <p>
-          डेटा स्रोत: data.gov.in | अंतिम अपडेट:{' '}
-          {lastUpdated.toLocaleTimeString('hi-IN')}
-        </p>
+        <p>डेटा स्रोत: data.gov.in | अंतिम अपडेट: {lastUpdated.toLocaleTimeString('hi-IN')}</p>
       </footer>
     </div>
   );
