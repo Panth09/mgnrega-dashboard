@@ -1,10 +1,8 @@
-import React, {
+import type { FC, ChangeEvent } from 'react';
+import {
   useState,
   useEffect,
   useRef,
-  FC,
-  MouseEvent,
-  ChangeEvent,
 } from 'react';
 import {
   AlertCircle,
@@ -27,7 +25,7 @@ import {
 import './App.css';
 
 /* -------------------------------------------------------------------------- */
-/*                                 Types                                    */
+/*                                 Types                                      */
 /* -------------------------------------------------------------------------- */
 interface State {
   state_code: string;
@@ -62,14 +60,12 @@ interface DistrictPerformance {
 }
 
 /* -------------------------------------------------------------------------- */
-/*                               Constants                                   */
+/*                                Constants                                   */
 /* -------------------------------------------------------------------------- */
-const API_URL: string =
-  (import.meta as unknown as ImportMetaEnv).env?.VITE_API_URL ??
-  'http://localhost:5000/api';
+const API_URL: string = import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api';
 
 /* -------------------------------------------------------------------------- */
-/*                              Helper Functions                             */
+/*                              Helper Functions                              */
 /* -------------------------------------------------------------------------- */
 const formatNumber = (num: number | undefined | null): string => {
   if (num == null) return '0';
@@ -138,7 +134,7 @@ const MetricCard: FC<MetricCardProps> = ({
 );
 
 /* -------------------------------------------------------------------------- */
-/*                               Main App Component                          */
+/*                               Main App Component                           */
 /* -------------------------------------------------------------------------- */
 const App: FC = () => {
   const [states, setStates] = useState<State[]>([]);
@@ -279,12 +275,12 @@ const App: FC = () => {
   const shareOnWhatsApp = (): void => {
     if (!performance) return;
 
-    const text = `🏛️ मनरेगा प्रदर्शन - ${performance.district.district_name}
+    const text = `मनरेगा प्रदर्शन - ${performance.district.district_name}
 
-👥 परिवारों को रोजगार: ${formatNumber(performance.district.total_households)}
-📅 औसत काम के दिन: ${performance.district.avg_days_per_household?.toFixed(1)}
-💰 खर्च: ${formatCurrency(performance.district.total_expenditure)}
-✅ पूरे काम: ${formatNumber(performance.district.works_completed)}
+परिवारों को रोजगार: ${formatNumber(performance.district.total_households)}
+औसत काम के दिन: ${performance.district.avg_days_per_household?.toFixed(1)}
+खर्च: ${formatCurrency(performance.district.total_expenditure)}
+पूरे काम: ${formatNumber(performance.district.works_completed)}
 
 महीना: ${performance.district.month}`;
 
