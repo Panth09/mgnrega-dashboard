@@ -30,7 +30,7 @@ console.log('🔌 Connecting to database...');
 // PostgreSQL connection - completely disable SSL verification
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: false  // Disable SSL entirely
+    ssl: process.env.DATABASE_URL.includes('sslmode=require') ? { rejectUnauthorized: false } : false
 });
 
 // Test connection
@@ -62,6 +62,8 @@ const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
 app.get('/api/states', async (req, res) => {
     try {
         console.log('📊 Fetching states...');
+        console.log('🔍 Database user:', await pool.query('SELECT current_user').then(res => res.rows[0].current_user));
+        console.log('🔍 Current schema:', await pool.query('SHOW search_path').then(res => res.rows[0].search_path));
         
         const cacheKey = 'states';
         const cached = cache.get(cacheKey);
@@ -80,7 +82,6 @@ app.get('/api/states', async (req, res) => {
         
         cache.set(cacheKey, { data: result.rows, timestamp: Date.now() });
         res.json(result.rows);
-        
     } catch (error) {
         console.error('❌ Error fetching states:');
         console.error('Message:', error.message);
