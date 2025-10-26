@@ -61,25 +61,37 @@ const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
 // 1. Get all states
 app.get('/api/states', async (req, res) => {
     try {
+        console.log('📊 Fetching states...');
+        
         const cacheKey = 'states';
         const cached = cache.get(cacheKey);
         
         if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+            console.log('✅ Returning cached states');
             return res.json(cached.data);
         }
         
+        console.log('🔍 Querying database for states...');
         const result = await pool.query(
             'SELECT DISTINCT state_code, state_name FROM public.districts ORDER BY state_name'
         );
+        
+        console.log(`✅ Found ${result.rows.length} states`);
         
         cache.set(cacheKey, { data: result.rows, timestamp: Date.now() });
         res.json(result.rows);
         
     } catch (error) {
-        console.error('Error fetching states:', error);
+        console.error('❌ Error fetching states:');
+        console.error('Message:', error.message);
+        console.error('Code:', error.code);
+        console.error('Detail:', error.detail);
+        console.error('Stack:', error.stack);
+        
         res.status(500).json({ 
             error: 'Failed to fetch states',
-            details: error.message 
+            details: error.message,
+            code: error.code
         });
     }
 });
