@@ -27,15 +27,10 @@ if (!process.env.DATABASE_URL) {
 
 console.log('🔌 Connecting to database...');
 
-// Parse connection string to add SSL config
-const connectionString = process.env.DATABASE_URL;
-
+// PostgreSQL connection - completely disable SSL verification
 const pool = new Pool({
-    connectionString: connectionString,
-    ssl: process.env.NODE_ENV === 'production' ? {
-        rejectUnauthorized: false,
-        require: true
-    } : false
+    connectionString: process.env.DATABASE_URL,
+    ssl: false  // Disable SSL entirely
 });
 
 // Test connection
