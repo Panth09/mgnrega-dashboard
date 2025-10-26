@@ -5,24 +5,13 @@ require('dotenv').config();
 
 const app = express();
 
-// ✅ CRITICAL: Configure CORS for production
-const allowedOrigins = [
-  'https://mgnrega-dashboard-by-panth.vercel.app',
-  'http://localhost:5173',
-  'http://localhost:3000'
-];
-
+// ✅ CORS Configuration
 app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'CORS policy does not allow access from this origin.';
-      return callback(new Error(msg), false);
-    }
-    return callback(null, true);
-  },
+  origin: [
+    'https://mgnrega-dashboard-by-panth.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:3000'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -30,69 +19,62 @@ app.use(cors({
 
 app.use(express.json());
 
-// Validate environment variables
-if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
-    console.error('❌ Missing Supabase credentials in .env file!');
-    console.error('Required: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY');
+// Validate environment
+if (!process.env.DATABASE_URL) {
+    console.error('❌ Missing DATABASE_URL in environment variables!');
     process.exit(1);
 }
 
-console.log('✅ Supabase URL:', process.env.SUPABASE_URL);
+console.log('🔌 Connecting to database...');
 
-// Initialize Supabase client
-const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_ANON_KEY
-);
+// PostgreSQL connection
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+});
 
-const supabaseAdmin = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY
-);
+// Test connection
+pool.connect((err, client, release) => {
+    if (err) {
+        console.error('❌ Database connection failed:', err.message);
+        return;
+    }
+    
+    client.query('SELECT NOW(), current_user', (err, result) => {
+        release();
+        if (err) {
+            console.error('❌ Query failed:', err.message);
+            return;
+        }
+        console.log('✅ Database connected!');
+        console.log('   Time:', result.rows[0].now);
+        console.log('   User:', result.rows[0].current_user);
+    });
+});
 
 // Simple cache
 const cache = new Map();
-const CACHE_TTL = 15 * 60 * 1000;
+const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
 
-function getCachedData(key, fetchFn) {
-    const cached = cache.get(key);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-        return Promise.resolve(cached.data);
-    }
-    return fetchFn().then(data => {
-        cache.set(key, { data, timestamp: Date.now() });
-        return data;
-    });
-}
+// API Routes
 
 // 1. Get all states
 app.get('/api/states', async (req, res) => {
     try {
-        console.log('Fetching states...');
+        const cacheKey = 'states';
+        const cached = cache.get(cacheKey);
         
-        const data = await getCachedData('states', async () => {
-            const { data, error } = await supabase
-                .from('districts')
-                .select('state_code, state_name')
-                .order('state_name');
-            
-            if (error) {
-                console.error('Supabase error:', error);
-                throw error;
-            }
-            
-            console.log('Raw data from Supabase:', data);
-            
-            // Get unique states
-            const uniqueStates = [...new Map(
-                data.map(item => [item.state_code, item])
-            ).values()];
-            
-            console.log('Unique states:', uniqueStates);
-            return uniqueStates;
-        });
+        if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+            return res.json(cached.data);
+        }
         
-        res.json(data);
+        const result = await pool.query(
+            'SELECT DISTINCT state_code, state_name FROM public.districts ORDER BY state_name'
+        );
+        
+        cache.set(cacheKey, { data: result.rows, timestamp: Date.now() });
+        res.json(result.rows);
+        
     } catch (error) {
         console.error('Error fetching states:', error);
         res.status(500).json({ 
@@ -106,29 +88,14 @@ app.get('/api/states', async (req, res) => {
 app.get('/api/districts/:stateCode', async (req, res) => {
     try {
         const { stateCode } = req.params;
-        console.log('Fetching districts for state:', stateCode);
         
-        const data = await getCachedData(`districts_${stateCode}`, async () => {
-            const { data, error } = await supabase
-                .from('districts')
-                .select('district_code, district_name')
-                .eq('state_code', stateCode)
-                .order('district_name');
-            
-            if (error) {
-                console.error('Supabase error:', error);
-                throw error;
-            }
-            
-            // Get unique districts
-            const uniqueDistricts = [...new Map(
-                data.map(item => [item.district_code, item])
-            ).values()];
-            
-            return uniqueDistricts;
-        });
+        const result = await pool.query(
+            'SELECT DISTINCT district_code, district_name FROM public.districts WHERE state_code = $1 ORDER BY district_name',
+            [stateCode]
+        );
         
-        res.json(data);
+        res.json(result.rows);
+        
     } catch (error) {
         console.error('Error fetching districts:', error);
         res.status(500).json({ 
@@ -142,43 +109,26 @@ app.get('/api/districts/:stateCode', async (req, res) => {
 app.get('/api/performance/:districtCode', async (req, res) => {
     try {
         const { districtCode } = req.params;
-        console.log('Fetching performance for district:', districtCode);
         
-        // Current month
-        const { data: currentData, error: currentError } = await supabase
-            .from('districts')
-            .select('*')
-            .eq('district_code', districtCode)
-            .order('month', { ascending: false })
-            .limit(2);
-        
-        if (currentError) {
-            console.error('Supabase error:', currentError);
-            throw currentError;
-        }
-        
-        if (!currentData || currentData.length === 0) {
+        // Get current and previous month data
+        const result = await pool.query(
+            'SELECT * FROM public.districts WHERE district_code = $1 ORDER BY month DESC LIMIT 2',
+            [districtCode]
+        );
+
+        if (result.rows.length === 0) {
             return res.status(404).json({ error: 'District not found' });
         }
-        
-        const current = currentData[0];
-        const previous = currentData[1] || null;
-        
-        // State average
-        const { data: stateData, error: stateError } = await supabase
-            .from('districts')
-            .select('avg_days_per_household')
-            .eq('state_code', current.state_code)
-            .eq('month', current.month);
-        
-        if (stateError) {
-            console.error('State avg error:', stateError);
-        }
-        
-        const stateAverage = stateData && stateData.length > 0
-            ? stateData.reduce((sum, d) => sum + parseFloat(d.avg_days_per_household || 0), 0) / stateData.length
-            : 0;
-        
+
+        const current = result.rows[0];
+        const previous = result.rows[1] || null;
+
+        // Get state average
+        const stateAvg = await pool.query(
+            'SELECT AVG(avg_days_per_household) as state_avg FROM public.districts WHERE state_code = $1 AND month = $2',
+            [current.state_code, current.month]
+        );
+
         // Calculate trends
         const trends = {
             households: previous ? 
@@ -190,14 +140,14 @@ app.get('/api/performance/:districtCode', async (req, res) => {
             works: previous ? 
                 (((current.works_completed - previous.works_completed) / previous.works_completed) * 100).toFixed(1) : '0'
         };
-        
+
         res.json({
             district: current,
             trends,
-            stateAverage: parseFloat(stateAverage.toFixed(1)),
+            stateAverage: parseFloat(stateAvg.rows[0]?.state_avg || 0).toFixed(1),
             lastUpdated: current.updated_at
         });
-        
+
     } catch (error) {
         console.error('Error fetching performance:', error);
         res.status(500).json({ 
@@ -210,17 +160,11 @@ app.get('/api/performance/:districtCode', async (req, res) => {
 // 4. Health check
 app.get('/health', async (req, res) => {
     try {
-        const { data, error } = await supabase
-            .from('districts')
-            .select('id')
-            .limit(1);
-        
-        if (error) throw error;
-        
+        const result = await pool.query('SELECT COUNT(*) as count FROM public.districts');
         res.json({ 
             status: 'healthy',
             database: 'connected',
-            recordCount: data ? data.length : 0,
+            records: result.rows[0].count,
             timestamp: new Date()
         });
     } catch (error) {
@@ -232,18 +176,13 @@ app.get('/health', async (req, res) => {
     }
 });
 
-// Data sync
-async function syncData() {
-    console.log('Data sync completed (using existing Supabase data)');
-    cache.clear();
-}
-
-cron.schedule('0 */6 * * *', syncData);
-syncData();
-
+// Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    console.log(`✅ Server running on http://localhost:${PORT}`);
-    console.log(`✅ Test health: http://localhost:${PORT}/health`);
-    console.log(`✅ Test states: http://localhost:${PORT}/api/states`);
+    console.log(`\n✅ Server running on port ${PORT}`);
+    console.log(`📊 API Endpoints:`);
+    console.log(`   - GET /health`);
+    console.log(`   - GET /api/states`);
+    console.log(`   - GET /api/districts/:stateCode`);
+    console.log(`   - GET /api/performance/:districtCode\n`);
 });
