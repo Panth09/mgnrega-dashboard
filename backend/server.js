@@ -27,13 +27,15 @@ if (!process.env.DATABASE_URL) {
 
 console.log('🔌 Connecting to database...');
 
-// PostgreSQL connection
+// Parse connection string to add SSL config
+const connectionString = process.env.DATABASE_URL;
+
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
+    connectionString: connectionString,
+    ssl: process.env.NODE_ENV === 'production' ? {
         rejectUnauthorized: false,
-        sslmode: 'require'
-    }
+        require: true
+    } : false
 });
 
 // Test connection
