@@ -30,7 +30,10 @@ console.log('🔌 Connecting to database...');
 // PostgreSQL connection
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
+    ssl: {
+        rejectUnauthorized: false,
+        sslmode: 'require'
+    }
 });
 
 // Test connection
